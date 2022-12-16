@@ -1,100 +1,99 @@
 import pygame
-from copy import deepcopy
+from random import choice
+
+WIDTH = 1200
+HEIGHT = 800
 
 
-class Board:
-    # создание поля
-    def __init__(self, width, height, left=10, top=10, cell_size=20):
-        self.width = width
-        self.height = height
-        self.board = [[0] * width for _ in range(height)]
-        self.left = 0
-        self.top = 0
-        self.cell_size = 0
-        self.set_view(left, top, cell_size)
+class Game:
 
-    def set_view(self, left, top, cell_size):
-        self.left = left
-        self.top = top
-        self.cell_size = cell_size
+    def __init__(self):
+        self.paddle_speed = 1
+        self.paddle_x = WIDTH // 2 - 125
+        self.ball_x = WIDTH // 2
+        self.ball_y = HEIGHT - 100
+        self.bar_y = 100
+        self.bars = []
+        self. ball_speed_y = 1
+        self.ball_speed_x = 1
+        self.bars_not_drawed = True
+        self.ball = pygame.Rect((self.ball_x, self.ball_y, 40, 40))
+        self.paddle = pygame.Rect((self.paddle_x, HEIGHT - 40, 250, 30))
 
+    def draw(self, screen):
+        if self.paddle_x == 0 or self.paddle_x == 950:
+            self.paddle_speed *= -1
+        if self.paddle.colliderect(self.ball):
+            self.ball_speed_y *= -1
+            self.ball_speed_x *= choice([-1, 1])
+        screen.fill((1, 1, 1))
+        self.paddle_x += self.paddle_speed
+        self.update_ball()
+        self.ball = pygame.Rect((self.ball_x, self.ball_y, 40, 40))
+        self.paddle = pygame.Rect((self.paddle_x, HEIGHT - 40, 250, 30))
+        pygame.draw.rect(screen, pygame.Color('orange'), self.ball)
+        pygame.draw.rect(screen, pygame.Color('darkorange'), self.paddle)
+        if self.bars_not_drawed:
+            self.draw_bars(screen)
+            self.bars_not_drawed = False
+        for bar in self.bars:
+            pygame.draw.rect(screen, bar[1], bar[0])
 
-class Life(Board):
-    def __init__(self, width, height, left=10, top=10, cell_size=20):
-        super().__init__(width, height, left=10, top=10, cell_size=20)
+    def update(self, event):
+        if event.key == pygame.K_LEFT and self.paddle_x > 0:
+            self.paddle_speed = -1
+        elif event.key == pygame.K_RIGHT:
+            self.paddle_speed = 1
 
-    def render(self, screen):
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.board[y][x]:
-                    pygame.draw.rect(screen, pygame.Color((20, 200, 20)), (x * self.cell_size + self.left,
-                                     y * self.cell_size + self.top, self.cell_size, self.cell_size))
-                pygame.draw.rect(screen, pygame.Color((20, 20, 20)), (x * self.cell_size + self.left,
-                                                                      y * self.cell_size + self.top,
-                                                                      self.cell_size, self.cell_size), 1)
+    def update_ball(self):
+        self.ball_y -= self.ball_speed_y
+        self.ball_x += self.ball_speed_x
+        if self.ball_x >= WIDTH - 40 or self.ball_x <= 0:
+            self.ball_speed_x *= -1
+        if self.ball_y <= 0:
+            self.ball_speed_y *= -1
+        for bar in self.bars:
+            if self.ball.colliderect(bar[0]):
+                self.bars.remove(bar)
+                self.ball_speed_y *= -1
+                self.ball_speed_x *= choice([-1, 1])
 
-    def get_cell(self, mouse_pos):
-        x = (mouse_pos[0] - self.left) // self.cell_size
-        y = (mouse_pos[1] - self.top) // self.cell_size
-        if x < 0 or x >= self.width or y < 0 or y >= self.height:
-            return None
-        return x, y
-
-    def on_click(self, cell_coords):
-        self.board[cell_coords[1]][cell_coords[0]] = (self.board[cell_coords[1]][cell_coords[0]] + 1) % 2
-
-    def get_click(self, mouse_pos):
-        cell = self.get_cell(mouse_pos)
-        if cell:
-            self.on_click(cell)
-
-    def next_move(self):
-        new_board = deepcopy(self.board)
-        for y in range(self.height):
-            for x in range(self.width):
-                s = 0
-                for delta_y in range(-1, 2):
-                    for delta_x in range(-1, 2):
-                        if self.width <= x + delta_x or x + delta_x < 0 or \
-                                self.height <= y + delta_y or y + delta_y < 0:
-                            continue
-                        s += self.board[y + delta_y][x + delta_x]
-                    s -= self.board[y][x]
-                    if s == 3:
-                        new_board[y][x] = 1
-                    elif s < 2 or s > 3:
-                        new_board[y][x] = 0
-        self.board = deepcopy(new_board)
+    def draw_bars(self, screen):
+        bar_y = 100
+        for color in ['red', 'lightblue', 'green']:
+            bar_x = 55
+            for i in range(8):
+                bar = [(pygame.Rect(bar_x, bar_y, 110, 50)), color]
+                self.bars.append(bar)
+                bar_x += 140
+            bar_y += 70
 
 
 pygame.init()
-screen = pygame.display.set_mode((600, 600))
-board = Life(29, 29, 10, 10, 30)
+pygame.display.set_caption('Arkanoid')
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 ticks = 0
 speed = 10
-life_going = False
 running = True
+playing = True
+ark = Game()
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            board.get_click(event.pos)
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE or \
-                event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-            life_going = not life_going
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:
-            speed += 1
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:
-            speed -= 1
-        screen.fill((235, 235, 235))
-        board.render(screen)
-        if ticks >= speed:
-            if life_going:
-                board.next_move()
-            ticks = 0
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            playing = not playing
+        if event.type == pygame.KEYDOWN:
+            ark.update(event)
+    if playing:
+        ark.draw(screen)
         pygame.display.flip()
-        clock.tick(100)
-        ticks += 1
+    if ticks >= speed:
+        if playing:
+            ark.draw(screen)
+            ticks = 0
+    pygame.display.flip()
+    clock.tick(200)
+    ticks += 1
 pygame.quit()
