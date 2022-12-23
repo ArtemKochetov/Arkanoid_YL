@@ -1,8 +1,6 @@
 import pygame
-import random
 import os
 import sys
-
 pygame.init()
 
 
@@ -17,19 +15,14 @@ def load_image(name, colorkey=None):
 
 
 class Bricks(pygame.sprite.Sprite):
-    image1 = load_image("red_brick.png")
-    image2 = load_image("purple_brick.png")
+    image = load_image("red_brick.png")
 
     def __init__(self):
         super().__init__(all_sprites)
-        self.image1 = Bricks.image1
-        self.image2 = Bricks.image2
-        self.rect1 = self.image1.get_rect()
-        self.rect2 = self.image2.get_rect()
-        self.mask1 = pygame.mask.from_surface(self.image1)
-        self.mask2 = pygame.mask.from_surface(self.image2)
-        self.rect1.bottom = height
-        self.rect2.bottom = height
+        self.image = Bricks.image
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.bottom = height
 
 
 class Platform(pygame.sprite.Sprite):
@@ -42,13 +35,13 @@ class Platform(pygame.sprite.Sprite):
         # вычисляем маску для эффективного сравнения
         self.mask = pygame.mask.from_surface(self.image)
         # располагаем горы внизу
-        self.rect.bottom = height
+        self.rect.bottom = width
         self.paddle_x = width // 2 - 125
 
     def update(self, event):
-        if event.key == pygame.K_LEFT and self.paddle_x > 0:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT and self.paddle_x > 0:
             self.paddle_speed = -1
-        elif event.key == pygame.K_RIGHT:
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
             self.paddle_speed = 1
 
 
@@ -97,14 +90,13 @@ while running:
             playing = not playing
         if event.type == pygame.KEYDOWN:
             platform.update(event)
+        all_sprites.update(event)
     if playing:
         pygame.display.flip()
     if ticks >= speed:
         if playing:
             ticks = 0
-
-    all_sprites.update()
-    screen.fill(pygame.Color('white'))
+    screen.fill(pygame.Color('black'))
     all_sprites.draw(screen)
     pygame.display.flip()
     clock.tick(100)
